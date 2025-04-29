@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { App } = require('@slack/bolt');
+const { generateResponse } = require('./services/claude');
 
 // Initialize the Slack app
 const app = new App({
@@ -9,9 +10,21 @@ const app = new App({
   appToken: process.env.SLACK_APP_TOKEN
 });
 
-// Milestone 1: Bot responds to hello
-app.message('hello', async ({ message, say }) => {
-  await say(`Hello there <@${message.user}>!`);
+// Milestone 1: Bot responds to hello with AI-generated responses
+app.message(/^(hi|hey|hello|yo|hola)( there)?(!)?$/i, async ({ message, say, context }) => {
+  try {
+    // Create a prompt for Claude
+    const prompt = `Generate a friendly, conversational greeting response to a user saying "${context.matches[0]}". 
+    Keep it brief (under 30 words) and casual but professional. Include addressing them with <@${message.user}>.`;
+    
+    // Get AI-generated response
+    const response = await generateResponse(prompt);
+    
+    await say(response);
+  } catch (error) {
+    console.error(`Error responding to greeting: ${error}`);
+    await say(`Hello there <@${message.user}>!`);
+  }
 });
 
 // Milestone 2: Bot adds reactions when it sees certain reactions
