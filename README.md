@@ -23,4 +23,18 @@ A Slack chatbot with multiple capabilities.
 
 ## Setup
 
-Instructions for setup and deployment will be added as the project progresses.
+1. Clone this repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Create a `.env` file based on `.env.sample` and fill in your Slack and Anthropic API credentials
+4. Start the bot:
+   ```
+   npm start
+   ```
+
+## Features
+
+### Natural Language Responses with Claude
+The bot uses Anthropic's Claude AI to generate natural-sounding responses to user messages, particularly for greetings.
