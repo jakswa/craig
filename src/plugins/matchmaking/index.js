@@ -1,4 +1,4 @@
-const matchRegex = /I need (\d+) (\w+)(?: for| to) (.+)/i;
+const matchRegex = /(?:i|[^ ]+) needs? (\d+) (\w+)(?: for| to) (.+)/i;
 
 /**
  * MatchmakingState tracks the current matchmaking activities
@@ -51,13 +51,16 @@ async function initializeMatchmaking(client, event, matchRequest) {
       name: 'hand'
     });
 
+    const needer = event.text.match(/<@(\w+)> need/i);
+    const initialUser = needer ? needer[1] : event.user;
+
     // Store this matchmaking session
     activeMatchmaking.set(event.ts, {
       channel: event.channel,
       requiredCount: matchRequest.requiredCount,
       role: matchRequest.role,
       activity: matchRequest.activity,
-      participants: [],
+      participants: [{ userId: initialUser }],
       requesterId: event.user
     });
   } catch (error) {
@@ -78,12 +81,12 @@ async function handleMatchmakingReaction(client, event) {
   if (!matchmaking) return;
 
   // Skip if user already joined
-  if (matchmaking.participants.some(p => p.userId === event.user)) return;
-
-  // Add user to participants
-  matchmaking.participants.push({
-    userId: event.user,
-  });
+  if (!matchmaking.participants.some(p => p.userId === event.user)) {
+    // Add user to participants
+    matchmaking.participants.push({
+      userId: event.user,
+    });
+  }
 
   // Check if we've reached the required count
   if (matchmaking.participants.length >= matchmaking.requiredCount) {
@@ -108,7 +111,7 @@ async function completeMatchmaking(client, messageTs, matchmaking) {
     await client.chat.postMessage({
       channel: matchmaking.channel,
       thread_ts: messageTs,
-      text: `${matchmaking.activity} is on! ${matchmaking.role}s: ${participantsList}`
+      text: `${matchmaking.activity} is on! ${matchmaking.role}: ${participantsList}`
     });
 
     // Remove from active matchmaking
@@ -118,8 +121,26 @@ async function completeMatchmaking(client, messageTs, matchmaking) {
   }
 }
 
+async function handleMessage({ event, client }) {
+  try {
+    // Skip if it's not a regular message or if it's from a bot
+    if (event.subtype || event.bot_id) return;
+    
+    // Check if this is a matchmaking request
+    const matchRequest = parseMatchmakingRequest(event.text);
+    if (matchRequest) {
+      await initializeMatchmaking(client, event, matchRequest);
+    }
+  } catch (error) {
+    console.error('Error handling message for matchmaking:', error);
+  }
+}
+
 module.exports = {
-  parseMatchmakingRequest,
-  initializeMatchmaking,
-  handleMatchmakingReaction
+  registerPlugin: (app) => {
+    app.event('message', handleMessage);
+    app.event('reaction_added', async ({ event, client }) => {
+      await handleMatchmakingReaction(client, event);
+    });
+  }
 };
