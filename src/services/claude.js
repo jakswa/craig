@@ -14,7 +14,7 @@ const anthropic = new Anthropic({
 async function generateResponse(prompt, options = {}) {
   try {
     const defaultOptions = {
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-3-5-haiku-20241022',
       maxTokens: 1000,
       temperature: 0.7,
       messages: null,

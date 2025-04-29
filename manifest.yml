@@ -1,17 +1,24 @@
 display_information:
-  name: Craig
+  name: craig
   description: Yet another chatbot. With AI of course.
   background_color: "#4A154B"
 
 features:
   bot_user:
-    display_name: Craig
+    display_name: craig
     always_online: true
 
   app_home:
     home_tab_enabled: true
     messages_tab_enabled: true
     messages_tab_read_only_enabled: false
+
+
+  slash_commands:
+    - command: /mario
+      description: Start a Mario Kart matchmaking session
+      usage_hint: Just type /mario to find 4 racers for Mario Kart
+      should_escape: false
 
 oauth_config:
   scopes:

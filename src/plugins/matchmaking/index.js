@@ -31,6 +31,58 @@ function parseMatchmakingRequest(text) {
 }
 
 /**
+ * Create a Mario Kart matchmaking session
+ * @param {object} client - Slack client
+ * @param {object} body - Command body
+ * @returns {Promise<void>}
+ */
+async function handleMarioCommand({ command, client, ack, say }) {
+  try {
+    // Acknowledge the command
+    await ack();
+    
+    // Post a visible message in the channel
+    const result = await say({
+      text: `<@${command.user_id}> needs 4 racers for Mario Kart`
+    });
+    
+    // Initialize matchmaking with the posted message
+    if (result && result.ts) {
+      const matchRequest = {
+        requiredCount: 4,
+        role: 'racers',
+        activity: 'Mario Kart'
+      };
+      
+      // Add reactions to the message
+      await client.reactions.add({
+        channel: command.channel_id,
+        timestamp: result.ts,
+        name: 'arrow_right'
+      });
+      
+      await client.reactions.add({
+        channel: command.channel_id,
+        timestamp: result.ts,
+        name: 'hand'
+      });
+      
+      // Store this matchmaking session
+      activeMatchmaking.set(result.ts, {
+        channel: command.channel_id,
+        requiredCount: matchRequest.requiredCount,
+        role: matchRequest.role,
+        activity: matchRequest.activity,
+        participants: [{ userId: command.user_id }],
+        requesterId: command.user_id
+      });
+    }
+  } catch (error) {
+    console.error('Error handling /mario command:', error);
+  }
+}
+
+/**
  * Initialize a new matchmaking session
  * @param {object} client - Slack client
  * @param {object} event - Message event
@@ -142,5 +194,6 @@ module.exports = {
     app.event('reaction_added', async ({ event, client }) => {
       await handleMatchmakingReaction(client, event);
     });
+    app.command('/mario', handleMarioCommand);
   }
 };

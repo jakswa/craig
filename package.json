@@ -1,5 +1,5 @@
 {
-  "name": "slackbot",
+  "name": "craig",
   "version": "0.1.0",
   "description": "A Slack chatbot with multiple capabilities",
   "main": "src/index.js",
