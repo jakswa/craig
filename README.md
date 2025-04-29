@@ -12,9 +12,9 @@ A Slack chatbot with multiple capabilities.
    - Bot adds reactions when it sees certain reactions on messages
    - Implement reaction event handling
 
-3. **Queueing System**
-   - Implement a queueing plugin with specific requirements (to be defined)
-   - Create commands for queue management
+3. **Matchmaking System**
+   - Implements a matchmaking plugin that helps organize activities
+   - Automatically manages participant sign-ups through reactions
 
 ## Technologies
 
@@ -38,3 +38,10 @@ A Slack chatbot with multiple capabilities.
 
 ### Natural Language Responses with Claude
 The bot uses Anthropic's Claude AI to generate natural-sounding responses to user messages, particularly for greetings.
+
+### Matchmaking System
+A matchmaking plugin that allows users to organize activities by:
+- Detecting messages with format "I need X Y for Z" (e.g., "I need 4 racers for gokarts")
+- Adding guide reactions (➡️ ✋) to prompt users to join
+- Tracking user sign-ups via reactions
+- Automatically creating a thread when the required number of participants is reached

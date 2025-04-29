@@ -1,0 +1,125 @@
+const matchRegex = /I need (\d+) (\w+)(?: for| to) (.+)/i;
+
+/**
+ * MatchmakingState tracks the current matchmaking activities
+ * Key: message timestamp
+ * Value: {
+ *   channel: string,
+ *   requiredCount: number,
+ *   role: string, 
+ *   activity: string,
+ *   participants: [{userId: string}],
+ *   requesterId: string
+ * }
+ */
+const activeMatchmaking = new Map();
+
+/**
+ * Check if a message is a matchmaking request
+ * @param {string} text - Message text to check
+ * @returns {object|null} - Matchmaking details or null if not a matchmaking request
+ */
+function parseMatchmakingRequest(text) {
+  const match = text.match(matchRegex);
+  if (!match) return null;
+
+  return {
+    requiredCount: parseInt(match[1], 10),
+    role: match[2],
+    activity: match[3].trim()
+  };
+}
+
+/**
+ * Initialize a new matchmaking session
+ * @param {object} client - Slack client
+ * @param {object} event - Message event
+ * @param {object} matchRequest - Parsed match request
+ */
+async function initializeMatchmaking(client, event, matchRequest) {
+  try {
+    // Add the initial reactions to guide users
+    await client.reactions.add({
+      channel: event.channel,
+      timestamp: event.ts,
+      name: 'arrow_right'
+    });
+    
+    await client.reactions.add({
+      channel: event.channel,
+      timestamp: event.ts,
+      name: 'hand'
+    });
+
+    // Store this matchmaking session
+    activeMatchmaking.set(event.ts, {
+      channel: event.channel,
+      requiredCount: matchRequest.requiredCount,
+      role: matchRequest.role,
+      activity: matchRequest.activity,
+      participants: [],
+      requesterId: event.user
+    });
+  } catch (error) {
+    console.error('Error initializing matchmaking:', error);
+  }
+}
+
+/**
+ * Handle a user joining a matchmaking session via reaction
+ * @param {object} client - Slack client
+ * @param {object} event - Reaction event
+ */
+async function handleMatchmakingReaction(client, event) {
+  if (event.reaction !== 'hand') return;
+  
+  // Check if this is for an active matchmaking
+  const matchmaking = activeMatchmaking.get(event.item.ts);
+  if (!matchmaking) return;
+
+  // Skip if user already joined
+  if (matchmaking.participants.some(p => p.userId === event.user)) return;
+
+  // Add user to participants
+  matchmaking.participants.push({
+    userId: event.user,
+  });
+
+  // Check if we've reached the required count
+  if (matchmaking.participants.length >= matchmaking.requiredCount) {
+    await completeMatchmaking(client, event.item.ts, matchmaking);
+  }
+}
+
+/**
+ * Complete a matchmaking session by posting in thread
+ * @param {object} client - Slack client
+ * @param {string} messageTs - Original message timestamp
+ * @param {object} matchmaking - Matchmaking session data
+ */
+async function completeMatchmaking(client, messageTs, matchmaking) {
+  try {
+    // Format the participants list
+    const participantsList = matchmaking.participants
+      .map(p => `<@${p.userId}>`)
+      .join(', ');
+
+    // Post completion message in thread
+    await client.chat.postMessage({
+      channel: matchmaking.channel,
+      thread_ts: messageTs,
+      text: `${matchmaking.activity} is on! ${matchmaking.role}s: ${participantsList}`
+    });
+
+    // Remove from active matchmaking
+    activeMatchmaking.delete(messageTs);
+  } catch (error) {
+    console.error('Error completing matchmaking:', error);
+  }
+}
+
+module.exports = {
+  parseMatchmakingRequest,
+  initializeMatchmaking,
+  handleMatchmakingReaction
+};

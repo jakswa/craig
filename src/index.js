@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { App } = require('@slack/bolt');
 const { generateResponse } = require('./services/claude');
+const { parseMatchmakingRequest, initializeMatchmaking, handleMatchmakingReaction } = require('./services/matchmaking');
 
 // Initialize the Slack app
 const app = new App({
@@ -56,25 +57,25 @@ app.event('app_mention', async ({ event, say, client }) => {
   }
 });
 
-// Milestone 2: Bot adds reactions when it sees certain reactions
-app.event('reaction_added', async ({ event, client }) => {
+app.event('message', async ({ event, client }) => {
   try {
-    // For demonstration, we'll mirror the reaction that was added
-    // This can be customized based on specific reactions you want to respond to
-    if (event.item.type === 'message') {
-      await client.reactions.add({
-        channel: event.item.channel,
-        timestamp: event.item.ts,
-        name: event.reaction
-      });
+    // Skip if it's not a regular message or if it's from a bot
+    if (event.subtype || event.bot_id) return;
+    
+    // Check if this is a matchmaking request
+    const matchRequest = parseMatchmakingRequest(event.text);
+    if (matchRequest) {
+      await initializeMatchmaking(client, event, matchRequest);
     }
   } catch (error) {
-    console.error(error);
+    console.error('Error handling message for matchmaking:', error);
   }
 });
 
-// Milestone 3: Queueing Plugin (placeholder)
-// To be implemented based on requirements
+// Update the reaction_added event to handle matchmaking reactions
+app.event('reaction_added', async ({ event, client }) => {
+  await handleMatchmakingReaction(client, event);
+});
 
 // Start the app
 (async () => {
